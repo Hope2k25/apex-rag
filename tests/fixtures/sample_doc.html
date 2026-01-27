@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Python Requests Documentation</title>
+</head>
+<body>
+    <nav>
+        <a href="#">Home</a>
+        <a href="#">Docs</a>
+        <a href="#">API</a>
+    </nav>
+    
+    <main>
+        <article>
+            <h1>Requests: HTTP for Humans</h1>
+            
+            <p>Requests is an elegant and simple HTTP library for Python, built for human beings.</p>
+            
+            <h2>Installation</h2>
+            <p>Install with pip:</p>
+            <pre><code>pip install requests</code></pre>
+            
+            <h2>Quickstart</h2>
+            
+            <h3>Making a Request</h3>
+            <p>Making a request with Requests is very simple.</p>
+            <pre><code>import requests
+r = requests.get('https://api.github.com/events')
+print(r.status_code)</code></pre>
+            
+            <h3>Response Content</h3>
+            <p>We can read the content of the server's response:</p>
+            <pre><code>r.text
+r.json()</code></pre>
+            
+            <h2>Error Handling</h2>
+            
+            <h3>ConnectionError</h3>
+            <p>Raised when a connection to the remote server fails.</p>
+            
+            <h3>Timeout</h3>
+            <p>Raised when a request times out.</p>
+            <pre><code>requests.get('https://example.com', timeout=0.001)
+# Raises requests.exceptions.Timeout</code></pre>
+            
+            <h2>Advanced Usage</h2>
+            
+            <h3>Sessions</h3>
+            <p>The Session object allows you to persist certain parameters across requests.</p>
+            <pre><code>s = requests.Session()
+s.get('https://httpbin.org/cookies/set/sessioncookie/123456789')
+r = s.get('https://httpbin.org/cookies')</code></pre>
+        </article>
+    </main>
+    
+    <footer>
+        <p>© 2026 Requests</p>
+    </footer>
+</body>
+</html>

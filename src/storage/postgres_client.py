@@ -311,6 +311,37 @@ class PostgresClient:
             )
             return MemoryNote(**dict(row)) if row else None
 
+    async def search_memories(
+        self,
+        query_embedding: list[float],
+        agent_id: str = "default",
+        limit: int = 5,
+        min_similarity: float = 0.5,
+    ) -> list[MemoryNote]:
+        """Search memories by vector similarity."""
+        async with self.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT *, 1 - (embedding <=> $1) as similarity
+                FROM memory_notes
+                WHERE agent_id = $2
+                  AND is_active = TRUE
+                  AND embedding IS NOT NULL
+                  AND 1 - (embedding <=> $1) >= $3
+                ORDER BY embedding <=> $1
+                LIMIT $4
+                """,
+                query_embedding,
+                agent_id,
+                min_similarity,
+                limit,
+            )
+            # We return MemoryNote objects. Note that 'similarity' is not part of the schema
+            # by default, so it will be ignored unless we model it. 
+            # But the row contains it. 
+            # We can use it if we want, or just return the notes.
+            return [MemoryNote(**dict(row)) for row in rows]
+
     async def update_memory(
         self,
         memory_id: UUID,

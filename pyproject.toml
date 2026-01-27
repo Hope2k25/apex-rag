@@ -7,32 +7,31 @@ readme = "README.md"
 
 dependencies = [
     # MCP Server
-    "mcp>=1.0.0",
+    "mcp>=1.23.0",
     "fastapi>=0.115.0",
     "uvicorn>=0.30.0",
-    
     # Database Clients
     "asyncpg>=0.30.0",           # PostgreSQL async
     "pgvector>=0.3.0",           # pgvector extension
-    "neo4j>=5.0.0",              # Memgraph uses Neo4j protocol
-    
-    # Embedding & NLP
+    "neo4j>=5.26.0",             # Neo4j Community Edition driver
+    # Embedding (gte-modernbert-base)
     "sentence-transformers>=3.0.0",
     "torch>=2.0.0",
-    
-    # Document Parsing
-    "beautifulsoup4>=4.12.0",
-    "html2text>=2024.2.0",
-    "docutils>=0.21.0",
-    
+    # Document Parsing (replaces custom BeautifulSoup/html2text)
+    "docling>=2.0.0",            # IBM's layout-aware parser (MIT)
+    # Chunking (replaces custom chunker)
+    "chonkie>=0.3.0",            # RAG-focused semantic chunking (MIT)
+    # Reranking (NEW - for retrieval quality)
+    "flashrank>=0.2.0",          # Ultra-fast CPU reranking (Apache 2.0)
     # Tree-sitter for code parsing
     "tree-sitter>=0.24.0",
     "tree-sitter-python>=0.23.0",
     "tree-sitter-javascript>=0.23.0",
     "tree-sitter-typescript>=0.23.0",
-    
+    "tree-sitter-go>=0.23.0",
+    "tree-sitter-rust>=0.23.0",
     # Utilities
-    "httpx>=0.28.0",             # Async HTTP for z.AI
+    "httpx>=0.28.0",             # Async HTTP for z.AI/OpenRouter
     "pydantic>=2.10.0",
     "pyyaml>=6.0",
     "python-dotenv>=1.0.0",

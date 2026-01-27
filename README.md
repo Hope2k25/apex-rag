@@ -10,9 +10,10 @@
 The **Apex RAG System** implements a state-of-the-art RAG architecture designed specifically to support LLM coding agents. It features:
 
 - **Deterministic Ingestion** - No LLM required for core pipeline
-- **Dual-Index Storage** - PostgreSQL (vectors) + Memgraph (graphs)
-- **PAR-RAG Loop** - Plan-Act-Review retrieval cycle
+- **Dual-Index Storage** - PostgreSQL (vectors) + Neo4j (graphs)
+- **PAR-RAG Loop** - Plan-Act-Review retrieval cycle with reranking
 - **Agentic Memory** - Checkpoint and rollback capabilities
+- **Auto-Library Docs** - Generate API documentation from installed packages
 
 ## Architecture
 
@@ -35,7 +36,7 @@ The **Apex RAG System** implements a state-of-the-art RAG architecture designed 
 │            ┌────────────────┼────────────────┐                  │
 │            ▼                ▼                ▼                  │
 │     ┌────────────┐   ┌────────────┐   ┌────────────┐           │
-│     │  z.AI API  │   │ PostgreSQL │   │  Memgraph  │           │
+│     │  z.AI API  │   │ PostgreSQL │   │   Neo4j    │           │
 │     │ (filtering)│   │ + pgvector │   │  (graphs)  │           │
 │     └────────────┘   └────────────┘   └────────────┘           │
 └─────────────────────────────────────────────────────────────────┘
@@ -44,7 +45,8 @@ The **Apex RAG System** implements a state-of-the-art RAG architecture designed 
 ## Prerequisites
 
 - **Python 3.11+**
-- **Docker Desktop** (for PostgreSQL + Memgraph)
+- **PostgreSQL 16+** with pgvector extension
+- **Neo4j Community Edition** (GPL-3.0)
 - **Git**
 
 ## Quick Start
@@ -56,15 +58,21 @@ git clone https://github.com/YOUR_USERNAME/apex-rag.git
 cd apex-rag
 ```
 
-### 2. Start the Databases
+### 2. Install Databases
 
+**PostgreSQL with pgvector:**
 ```bash
-docker-compose up -d
+# Install PostgreSQL 16+ and psql
+# Install pgvector extension
+CREATE EXTENSION vector;
 ```
 
-This starts:
-- PostgreSQL with pgvector on port `5432`
-- Memgraph on port `7687` (Bolt) and `3000` (Lab UI)
+**Neo4j Community:**
+```bash
+# Download from neo4j.com/download
+# Or use docker-compose for quick setup:
+docker-compose up -d
+```
 
 ### 3. Install Python Dependencies
 
@@ -108,16 +116,17 @@ apex-rag/
 │   │   ├── ingest.py                # ingest_* tools
 │   │   └── context.py               # get_repomap, get_project_context
 │   ├── ingestion/                   # Document & code parsing
-│   │   ├── document_parser.py       # PDF/HTML/MD parsing
+│   │   ├── document_parser.py       # DEPRECATED → use docling
 │   │   ├── code_indexer.py          # Tree-sitter DKB generation
-│   │   └── chunker.py               # Structural chunking
+│   │   └── chunker.py               # DEPRECATED → use chonkie
 │   ├── retrieval/                   # Search & PAR-RAG loop
 │   │   ├── par_rag.py               # Plan-Act-Review loop
 │   │   ├── hybrid_search.py         # Vector + BM25 + Graph
+│   │   ├── reranker.py              # FlashRank reranking
 │   │   └── repomap.py               # RepoMap generation
 │   ├── storage/                     # Database clients
 │   │   ├── postgres_client.py       # pgvector operations
-│   │   ├── memgraph_client.py       # Cypher queries
+│   │   ├── neo4j_client.py          # Neo4j graph queries
 │   │   └── schemas.py               # Pydantic models
 │   └── utils/
 │       ├── embedding.py             # gte-modernbert-base wrapper
@@ -133,14 +142,16 @@ apex-rag/
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| Vector DB | PostgreSQL + pgvector |
-| Graph DB | Memgraph |
-| Embedding | gte-modernbert-base (local) |
-| Doc Parsing | MinerU / BeautifulSoup |
-| Code Parsing | Tree-sitter |
-| MCP Server | Python MCP SDK |
+| Component | Technology | License |
+|-----------|------------|--------|
+| **Vector DB** | PostgreSQL + pgvector | PostgreSQL |
+| **Graph DB** | Neo4j Community | GPL-3.0 |
+| **Embedding** | gte-modernbert-base via sentence-transformers | Apache 2.0 |
+| **Doc Parsing** | docling (IBM) | MIT |
+| **Chunking** | chonkie | MIT |
+| **Reranking** | FlashRank | Apache 2.0 |
+| **Code Parsing** | Tree-sitter | MIT |
+| **MCP Server** | Python MCP SDK | MIT |
 
 ## Documentation
 
