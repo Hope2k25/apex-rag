@@ -24,7 +24,7 @@
 - [x] Create `.gitignore`
 - [x] Create `LICENSE` (MIT)
 - [x] Initialize git repository
-- [ ] Create GitHub repository and push initial commit
+- [x] Create GitHub repository and push initial commit
 
 ### Database Schema
 - [x] PostgreSQL schema design (`sql/init.sql`)
@@ -54,6 +54,10 @@
   - [x] DKB Graph models
   - [x] SearchResult models
   - [x] UniversalMetadata model
+  - [x] LibraryInfo models (multi-language support)
+  - [x] APIElement models
+  - [x] ErrorPattern models (for error → API linking)
+  - [x] ProjectDependencies models
 
 ### Database Clients
 - [ ] `src/storage/postgres_client.py`
@@ -104,12 +108,16 @@
 
 ### Library Documenter (KEY FEATURE)
 - [ ] `src/ingestion/library_documenter.py`
-  - [ ] Read requirements.txt / pyproject.toml
-  - [ ] Use `inspect` module for API extraction
+  - [ ] Detect project languages from config files
+  - [ ] Parse lockfiles (requirements.txt, package-lock.json, go.sum, etc.)
+  - [ ] Python: Use `inspect` module for API extraction
+  - [ ] JavaScript/TypeScript: Use TypeScript compiler API
+  - [ ] Go: Use `go/parser` and `go/ast`
+  - [ ] Rust: Use rustdoc JSON output
   - [ ] Extract docstrings and signatures
-  - [ ] Extract `raise` statements via AST
+  - [ ] Extract raise/throw/panic statements via AST
   - [ ] Generate Markdown docs per module
-  - [ ] Link errors to API documentation
+  - [ ] Link errors to API documentation in Neo4j
 
 ### Chunker
 - [ ] `src/ingestion/chunker.py`
@@ -210,7 +218,8 @@
 
 - [ ] Update README with installation instructions
 - [ ] Create MCP configuration examples
-- [ ] Update planning docs (Memgraph → Neo4j)
+- [x] Update planning docs (Memgraph → Neo4j)
+- [x] Create plan_library_autodoc.md specification
 - [ ] Create sample data for testing
 - [ ] Performance testing
 
@@ -240,4 +249,4 @@
 
 ---
 
-*Last Updated: 2026-01-26T19:00:00-06:00*
+*Last Updated: 2026-01-26T19:10:00-06:00*

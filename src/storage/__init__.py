@@ -1,8 +1,9 @@
 """Storage module for database clients."""
 
 from .postgres_client import PostgresClient
-from .memgraph_client import MemgraphClient
+from .neo4j_client import Neo4jClient
 from .schemas import (
+    # Core models
     SemanticChunk,
     SemanticChunkCreate,
     CodeEntity,
@@ -17,15 +18,36 @@ from .schemas import (
     DKBNode,
     DKBLink,
     UniversalMetadata,
+    IngestionManifestEntry,
+    # Enums
     MemoryType,
     KnowledgeType,
     EntityType,
     IngestionStatus,
+    # Library Documentation (Multi-Language)
+    ProgrammingLanguage,
+    PackageEcosystem,
+    APIElementType,
+    LibraryInfo,
+    ParameterInfo,
+    ReturnInfo,
+    ExampleInfo,
+    ErrorPatternBase,
+    ErrorPattern,
+    APIElementBase,
+    APIElementCreate,
+    APIElement,
+    ErrorLookupResult,
+    # Project Dependencies
+    DependencyInfo,
+    ProjectDependencies,
 )
 
 __all__ = [
+    # Clients
     "PostgresClient",
-    "MemgraphClient",
+    "Neo4jClient",
+    # Core models
     "SemanticChunk",
     "SemanticChunkCreate",
     "CodeEntity",
@@ -40,8 +62,27 @@ __all__ = [
     "DKBNode",
     "DKBLink",
     "UniversalMetadata",
+    "IngestionManifestEntry",
+    # Enums
     "MemoryType",
     "KnowledgeType",
     "EntityType",
     "IngestionStatus",
+    # Library Documentation
+    "ProgrammingLanguage",
+    "PackageEcosystem",
+    "APIElementType",
+    "LibraryInfo",
+    "ParameterInfo",
+    "ReturnInfo",
+    "ExampleInfo",
+    "ErrorPatternBase",
+    "ErrorPattern",
+    "APIElementBase",
+    "APIElementCreate",
+    "APIElement",
+    "ErrorLookupResult",
+    # Project Dependencies
+    "DependencyInfo",
+    "ProjectDependencies",
 ]

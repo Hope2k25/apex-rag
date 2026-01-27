@@ -281,3 +281,194 @@ class UniversalMetadata(BaseModel):
     original_format: Optional[str] = None
     extracted_at: datetime = Field(default_factory=datetime.utcnow)
     content_hash: Optional[str] = None
+
+
+# ============================================
+# LIBRARY DOCUMENTATION (Multi-Language)
+# ============================================
+
+class ProgrammingLanguage(str, Enum):
+    """Supported programming languages for library documentation."""
+    PYTHON = "python"
+    JAVASCRIPT = "javascript"
+    TYPESCRIPT = "typescript"
+    GO = "go"
+    RUST = "rust"
+    CSHARP = "csharp"
+    JAVA = "java"
+
+
+class PackageEcosystem(str, Enum):
+    """Package ecosystems/registries."""
+    PYPI = "pypi"
+    NPM = "npm"
+    CRATES = "crates"
+    GO_MODULES = "go-modules"
+    NUGET = "nuget"
+    MAVEN = "maven"
+
+
+class APIElementType(str, Enum):
+    """Types of API elements."""
+    CLASS = "class"
+    FUNCTION = "function"
+    METHOD = "method"
+    INTERFACE = "interface"
+    STRUCT = "struct"
+    ENUM = "enum"
+    CONSTANT = "constant"
+    TYPE_ALIAS = "type_alias"
+    TRAIT = "trait"  # Rust
+    IMPL = "impl"    # Rust
+
+
+class LibraryInfo(BaseModel):
+    """Information about a library/package."""
+    id: str  # e.g., "pypi:fastapi:0.115.6"
+    name: str
+    version: str
+    language: ProgrammingLanguage
+    ecosystem: PackageEcosystem
+    repository_url: Optional[str] = None
+    license: Optional[str] = None
+    homepage_url: Optional[str] = None
+    documentation_url: Optional[str] = None
+    documented_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ParameterInfo(BaseModel):
+    """API parameter information."""
+    name: str
+    type: Optional[str] = None
+    default: Optional[str] = None
+    description: Optional[str] = None
+    required: bool = True
+    is_variadic: bool = False  # *args, ...rest
+    is_keyword: bool = False   # **kwargs
+
+
+class ReturnInfo(BaseModel):
+    """API return type information."""
+    type: Optional[str] = None
+    description: Optional[str] = None
+    is_async: bool = False
+    is_generator: bool = False
+
+
+class ExampleInfo(BaseModel):
+    """Code example for an API."""
+    title: str
+    language: str
+    code: str
+    description: Optional[str] = None
+
+
+class ErrorPatternBase(BaseModel):
+    """Base model for error patterns extracted from library source."""
+    exception_type: str
+    message_pattern: str
+    message_regex: Optional[str] = None  # For fuzzy matching
+    condition: Optional[str] = None  # When this error is raised
+    source_line: Optional[int] = None
+
+
+class ErrorPattern(ErrorPatternBase):
+    """Full error pattern with linking information."""
+    id: str  # e.g., "err:fastapi:ValueError:prefix-slash"
+    library_id: str
+    api_element_id: Optional[str] = None
+    language: ProgrammingLanguage
+    message_embedding: Optional[list[float]] = None
+    linked_doc_chunk_ids: list[str] = Field(default_factory=list)
+    linked_fix_ids: list[str] = Field(default_factory=list)
+    times_encountered: int = 0
+    last_seen: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class APIElementBase(BaseModel):
+    """Base model for API elements."""
+    name: str
+    element_type: APIElementType
+    module: Optional[str] = None
+    parent: Optional[str] = None  # Parent class for methods
+    visibility: str = "public"  # public, private, protected, internal
+    signature: Optional[str] = None
+    docstring: Optional[str] = None
+    deprecated: bool = False
+    deprecation_message: Optional[str] = None
+    since_version: Optional[str] = None
+
+
+class APIElementCreate(APIElementBase):
+    """Model for creating a new API element."""
+    id: str  # e.g., "fastapi.routing.APIRouter"
+    library_id: str
+    parameters: list[ParameterInfo] = Field(default_factory=list)
+    returns: Optional[ReturnInfo] = None
+    type_parameters: list[str] = Field(default_factory=list)  # For generics
+    examples: list[ExampleInfo] = Field(default_factory=list)
+    see_also: list[str] = Field(default_factory=list)
+    errors_raised: list[ErrorPatternBase] = Field(default_factory=list)
+    docstring_embedding: Optional[list[float]] = None
+    source_file: Optional[str] = None
+    start_line: Optional[int] = None
+    end_line: Optional[int] = None
+    source_hash: Optional[str] = None
+
+
+class APIElement(APIElementBase):
+    """Full API element model with all fields."""
+    id: str
+    library_id: str
+    parameters: list[ParameterInfo] = Field(default_factory=list)
+    returns: Optional[ReturnInfo] = None
+    type_parameters: list[str] = Field(default_factory=list)
+    examples: list[ExampleInfo] = Field(default_factory=list)
+    see_also: list[str] = Field(default_factory=list)
+    errors_raised: list[ErrorPatternBase] = Field(default_factory=list)
+    docstring_embedding: Optional[list[float]] = None
+    source_file: Optional[str] = None
+    start_line: Optional[int] = None
+    end_line: Optional[int] = None
+    source_hash: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        from_attributes = True
+
+
+class ErrorLookupResult(BaseModel):
+    """Result from looking up an error."""
+    error_pattern: ErrorPattern
+    api_element: Optional[APIElement] = None
+    library: Optional[LibraryInfo] = None
+    documentation_chunks: list[SemanticChunk] = Field(default_factory=list)
+    known_fixes: list[dict] = Field(default_factory=list)
+    confidence: float = 0.0
+
+
+# ============================================
+# PROJECT DEPENDENCIES
+# ============================================
+
+class DependencyInfo(BaseModel):
+    """Information about a project dependency."""
+    name: str
+    version: str  # Exact version from lockfile
+    version_constraint: Optional[str] = None  # Original constraint (e.g., "^1.0.0")
+    language: ProgrammingLanguage
+    ecosystem: PackageEcosystem
+    is_direct: bool = True  # Direct vs transitive dependency
+    is_dev: bool = False    # Dev/test dependency
+    parent_dependency: Optional[str] = None  # For transitive deps
+
+
+class ProjectDependencies(BaseModel):
+    """All dependencies for a project."""
+    project_path: str
+    languages_detected: list[ProgrammingLanguage]
+    dependencies: list[DependencyInfo]
+    extracted_at: datetime = Field(default_factory=datetime.utcnow)
+    lockfile_sources: list[str] = Field(default_factory=list)  # Which files were parsed
