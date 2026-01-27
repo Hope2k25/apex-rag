@@ -1,0 +1,134 @@
+# ==============================================
+# Python
+# ==============================================
+
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ==============================================
+# Environment & Secrets
+# ==============================================
+
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+secrets.yaml
+secrets.json
+
+# ==============================================
+# IDE & Editors
+# ==============================================
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains
+.idea/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ==============================================
+# Testing & Coverage
+# ==============================================
+
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# ==============================================
+# Data & Outputs
+# ==============================================
+
+# Input/output data directories
+data/input/
+data/output/
+data/cache/
+
+# Don't ignore the data directory structure
+!data/.gitkeep
+!data/input/.gitkeep
+!data/output/.gitkeep
+
+# Model cache
+.model_cache/
+models/
+
+# Logs
+*.log
+logs/
+
+# ==============================================
+# Database
+# ==============================================
+
+# Local database files (if using SQLite fallback)
+*.db
+*.sqlite
+*.sqlite3
+
+# ==============================================
+# OS Generated
+# ==============================================
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# ==============================================
+# Misc
+# ==============================================
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# mypy
+.mypy_cache/
+
+# ruff
+.ruff_cache/

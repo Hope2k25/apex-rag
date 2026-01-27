@@ -1,0 +1,56 @@
+# Apex RAG System - Docker Compose Configuration
+# Run: docker-compose up -d
+# Requires: Docker Desktop installed and running
+
+version: '3.8'
+
+services:
+  # PostgreSQL with pgvector extension for vector storage
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: apex-postgres
+    environment:
+      POSTGRES_USER: apex
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: apex_rag
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U apex -d apex_rag"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Memgraph for graph storage and traversal
+  memgraph:
+    image: memgraph/memgraph-platform
+    container_name: apex-memgraph
+    ports:
+      - "7687:7687"   # Bolt protocol (Cypher queries)
+      - "7444:7444"   # Lab websocket
+      - "3000:3000"   # Memgraph Lab UI
+    volumes:
+      - memgraph_data:/var/lib/memgraph
+    environment:
+      MEMGRAPH_USER: ""
+      MEMGRAPH_PASSWORD: ""
+    healthcheck:
+      test: ["CMD", "echo", "'RETURN 1;'", "|", "mgconsole"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    name: apex-postgres-data
+  memgraph_data:
+    name: apex-memgraph-data
+
+networks:
+  default:
+    name: apex-rag-network
