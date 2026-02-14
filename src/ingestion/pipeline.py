@@ -121,7 +121,11 @@ class IngestionPipeline:
         await self._postgres.connect()
 
         self._neo4j = Neo4jClient()
-        await self._neo4j.connect()
+        try:
+            await self._neo4j.connect()
+        except Exception as e:
+            print(f"⚠️  Warning: Neo4j connection failed: {e}. Graph features will be disabled.")
+            self._neo4j = None
 
         if not self.skip_embedding:
             self._embedding_model = EmbeddingModel()
@@ -135,7 +139,7 @@ class IngestionPipeline:
         if self._postgres:
             await self._postgres.close()
         if self._neo4j:
-            await self._neo4j.close()
+            await self._neo4j.disconnect()
 
     # ========================================
     # DOCUMENT INGESTION
@@ -547,6 +551,10 @@ async def index_codebase_cli(
 
 if __name__ == "__main__":
     import argparse
+    from dotenv import load_dotenv
+
+    # Load environment variables
+    load_dotenv()
 
     parser = argparse.ArgumentParser(description="Apex RAG Ingestion Pipeline")
     parser.add_argument("--files", nargs="+", help="Specific files to ingest")

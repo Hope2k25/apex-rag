@@ -31,7 +31,7 @@ async def setup_postgres():
             
         # Execute script
         print("   Executing schema script...")
-        async with client.pool.acquire() as conn:
+        async with client.acquire() as conn:
              await conn.execute(sql_script)
              
         print("✅ PostgreSQL Schema Initialized")

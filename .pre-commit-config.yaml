@@ -1,0 +1,101 @@
+# Pre-commit hooks configuration for Apex RAG System
+#
+# This configuration enforces code quality, type checking, and security before commits.
+# 
+# MCP Usage Documentation:
+# - Ruff: /astral-sh/ruff - Python linting and formatting tool
+# - Mypy: /python/mypy - Static type checker for Python
+# - TruffleHog: /trufflesecurity/trufflehog - Secrets detection
+#
+# References:
+# - Ruff pre-commit: https://github.com/astral-sh/ruff-pre-commit
+# - TruffleHog docs: https://docs.trufflesecurity.com/pre-commit-hooks
+
+# Minimum version of pre-commit required
+minimum_pre_commit_version: "3.5.0"
+
+# Default language version
+default_language_version:
+  python: python3.11
+
+# Pre-commit hooks
+repos:
+  # Ruff - Fast Python linter and formatter
+  # Context7: /astral-sh/ruff - High reputation, 6955 code snippets
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.10
+    hooks:
+      # Run linter with auto-fix
+      # Must run before formatter as --fix may introduce formatting changes
+      - id: ruff-check
+        name: Ruff Linter
+        args: [--fix]
+        types_or: [python, pyi]
+      # Run formatter
+      - id: ruff-format
+        name: Ruff Formatter
+        types_or: [python, pyi]
+
+  # Mypy - Static type checking
+  # Context7: /python/mypy - High reputation, 733 code snippets, Benchmark Score 91.8
+  # Note: Mypy is slow for large codebases; consider running manually for full checks
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.14.1
+    hooks:
+      - id: mypy
+        name: Mypy Type Checker
+        additional_dependencies:
+          - pydantic>=2.10.0
+          - types-pyyaml
+        args:
+          - --ignore-missing-imports
+          - --no-strict-optional
+          - --warn-return-any
+        types_or: [python, pyi]
+
+  # TruffleHog - Secrets detection
+  # Context7: /trufflesecurity/trufflehog - High reputation, 304 code snippets, Benchmark Score 88.3
+  # Prevents secrets from being committed
+  # Note: Using older version to avoid Windows Git checkout issues
+  - repo: https://github.com/trufflesecurity/trufflehog
+    rev: v2.2.1
+    hooks:
+      - id: trufflehog
+        name: TruffleHog Secrets Scanner
+        args:
+          - git
+          - file
+          - --since-commit=HEAD
+          - --results=verified,unknown
+          - --fail
+        pass_filenames: false
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # Check for large files
+      - id: check-added-large-files
+        name: Check for Large Files
+        args: ['--maxkb=1000']
+      # Check for merge conflicts
+      - id: check-merge-conflict
+        name: Check for Merge Conflicts
+      # Detect private keys
+      - id: detect-private-key
+        name: Detect Private Keys
+      # Fix end of files
+      - id: end-of-file-fixer
+        name: Fix End of Files
+      # Trim trailing whitespace
+      - id: trailing-whitespace
+        name: Trim Trailing Whitespace
+      # Check YAML syntax
+      - id: check-yaml
+        name: Check YAML Syntax
+      # Check JSON syntax
+      - id: check-json
+        name: Check JSON Syntax
+      # Check TOML syntax
+      - id: check-toml
+        name: Check TOML Syntax

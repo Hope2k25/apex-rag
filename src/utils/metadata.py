@@ -10,7 +10,7 @@ Handles:
 import hashlib
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
@@ -140,6 +140,9 @@ def infer_knowledge_type(file_path: str, content: str) -> KnowledgeType:
     """
     path_lower = file_path.lower()
     
+    if "error" in path_lower or "traceback" in path_lower:
+        return KnowledgeType.ERROR_FIXES
+
     if any(ext in path_lower for ext in EXTENSION_MAP.keys()):
         return KnowledgeType.SNIPPETS
         
@@ -148,9 +151,6 @@ def infer_knowledge_type(file_path: str, content: str) -> KnowledgeType:
         if "api" in content.lower() or "reference" in content.lower():
             return KnowledgeType.LIBRARY_DOCS
         return KnowledgeType.GUIDANCE
-        
-    if "error" in path_lower or "traceback" in path_lower:
-        return KnowledgeType.ERROR_FIXES
         
     return KnowledgeType.GUIDANCE
 
@@ -192,5 +192,5 @@ def generate_universal_metadata(
         keywords=keywords,
         original_format=original_format,
         content_hash=content_hash,
-        extracted_at=datetime.utcnow()
+        extracted_at=datetime.now(timezone.utc)
     )

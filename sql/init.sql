@@ -8,7 +8,7 @@
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "vector";
+-- CREATE EXTENSION IF NOT EXISTS "vector";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 -- ============================================
@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS semantic_chunks (
     header_path TEXT,  -- Breadcrumb path (e.g., "Doc > Section > Subsection")
     content TEXT NOT NULL,
     content_tsv TSVECTOR GENERATED ALWAYS AS (to_tsvector('english', content)) STORED,
-    embedding VECTOR(768),  -- gte-modernbert-base produces 768-dim vectors
+    -- embedding float8[],  -- gte-modernbert-base produces 768-dim vectors
+    embedding float8[], -- FALLBACK: Use float array for Windows without pgvector
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -47,8 +48,8 @@ CREATE TABLE IF NOT EXISTS semantic_chunks (
 );
 
 -- Indexes for semantic_chunks
-CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON semantic_chunks 
-    USING hnsw (embedding vector_cosine_ops);
+-- CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON semantic_chunks 
+--     -- USING hnsw (embedding vector_cosine_ops);
 
 CREATE INDEX IF NOT EXISTS idx_chunks_tsv ON semantic_chunks 
     USING GIN (content_tsv);
@@ -78,7 +79,7 @@ CREATE TABLE IF NOT EXISTS code_entities (
     end_line INTEGER,
     signature TEXT,
     docstring TEXT,
-    docstring_embedding VECTOR(768),  -- Embedding of docstring + signature
+    docstring_embedding float8[],  -- Embedding of docstring + signature
     metadata JSONB DEFAULT '{}',
     content_hash TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -97,8 +98,8 @@ CREATE TABLE IF NOT EXISTS code_entities (
 );
 
 -- Indexes for code_entities
-CREATE INDEX IF NOT EXISTS idx_code_embedding ON code_entities 
-    USING hnsw (docstring_embedding vector_cosine_ops);
+-- CREATE INDEX IF NOT EXISTS idx_code_embedding ON code_entities 
+--     -- USING hnsw (docstring_embedding vector_cosine_ops);
 
 CREATE INDEX IF NOT EXISTS idx_code_type ON code_entities (entity_type);
 
@@ -116,7 +117,7 @@ CREATE TABLE IF NOT EXISTS memory_notes (
     content TEXT NOT NULL,
     context TEXT,
     keywords TEXT[],
-    embedding VECTOR(768),
+    embedding float8[],
     source_ref TEXT,  -- Link to source document/code entity
     usage_count INTEGER DEFAULT 0,
     last_accessed TIMESTAMPTZ DEFAULT NOW(),
@@ -127,8 +128,8 @@ CREATE TABLE IF NOT EXISTS memory_notes (
 );
 
 -- Indexes for memory_notes
-CREATE INDEX IF NOT EXISTS idx_memory_embedding ON memory_notes 
-    USING hnsw (embedding vector_cosine_ops);
+-- CREATE INDEX IF NOT EXISTS idx_memory_embedding ON memory_notes 
+--     -- USING hnsw (embedding vector_cosine_ops);
 
 CREATE INDEX IF NOT EXISTS idx_memory_active ON memory_notes (is_active);
 
@@ -230,7 +231,7 @@ CREATE TABLE IF NOT EXISTS api_elements (
     visibility TEXT DEFAULT 'public',
     signature TEXT,
     docstring TEXT,
-    docstring_embedding VECTOR(768),
+    docstring_embedding float8[],
     parameters JSONB DEFAULT '[]',  -- Array of ParameterInfo
     returns JSONB,  -- ReturnInfo
     type_parameters TEXT[],  -- For generics
@@ -254,8 +255,8 @@ CREATE TABLE IF NOT EXISTS api_elements (
     llm_enrichment_model TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_api_embedding ON api_elements 
-    USING hnsw (docstring_embedding vector_cosine_ops);
+-- CREATE INDEX IF NOT EXISTS idx_api_embedding ON api_elements 
+--     -- USING hnsw (docstring_embedding vector_cosine_ops);
 
 CREATE INDEX IF NOT EXISTS idx_api_library ON api_elements (library_id);
 
@@ -273,7 +274,7 @@ CREATE TABLE IF NOT EXISTS error_patterns (
     exception_type TEXT NOT NULL,
     message_pattern TEXT NOT NULL,
     message_regex TEXT,  -- For fuzzy matching
-    message_embedding VECTOR(768),  -- For semantic error matching
+    message_embedding float8[],  -- For semantic error matching
     condition TEXT,  -- When this error is raised
     source_line INTEGER,
     language TEXT NOT NULL,
@@ -289,8 +290,8 @@ CREATE TABLE IF NOT EXISTS error_patterns (
     llm_enriched_at TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS idx_error_embedding ON error_patterns 
-    USING hnsw (message_embedding vector_cosine_ops);
+-- CREATE INDEX IF NOT EXISTS idx_error_embedding ON error_patterns 
+--     -- USING hnsw (message_embedding vector_cosine_ops);
 
 CREATE INDEX IF NOT EXISTS idx_error_type ON error_patterns (language, exception_type);
 
@@ -377,7 +378,7 @@ CREATE TRIGGER update_error_patterns_updated_at
 -- Hybrid search function combining vector and BM25
 CREATE OR REPLACE FUNCTION hybrid_search(
     query_text TEXT,
-    query_embedding VECTOR(768),
+    query_embedding float8[],
     alpha FLOAT DEFAULT 0.7,
     result_limit INTEGER DEFAULT 20
 )
@@ -391,51 +392,19 @@ RETURNS TABLE(
     combined_score FLOAT
 ) AS $$
 BEGIN
+    -- STUBBED HYBRID SEARCH (Sparse only due to missing pgvector)
     RETURN QUERY
-    WITH dense_results AS (
-        SELECT 
-            sc.id,
-            sc.content,
-            sc.source_file,
-            sc.header_path,
-            1 - (sc.embedding <=> query_embedding) AS score
-        FROM semantic_chunks sc
-        WHERE sc.embedding IS NOT NULL
-        ORDER BY sc.embedding <=> query_embedding
-        LIMIT 100
-    ),
-    sparse_results AS (
-        SELECT 
-            sc.id,
-            ts_rank(sc.content_tsv, websearch_to_tsquery('english', query_text)) AS score
-        FROM semantic_chunks sc
-        WHERE sc.content_tsv @@ websearch_to_tsquery('english', query_text)
-        ORDER BY score DESC
-        LIMIT 100
-    ),
-    combined AS (
-        SELECT 
-            COALESCE(d.id, s_lookup.id) AS id,
-            COALESCE(d.content, s_lookup.content) AS content,
-            COALESCE(d.source_file, s_lookup.source_file) AS source_file,
-            COALESCE(d.header_path, s_lookup.header_path) AS header_path,
-            COALESCE(d.score, 0.0) AS dense_score,
-            COALESCE(s.score, 0.0) AS sparse_score,
-            (alpha * COALESCE(d.score, 0.0) + (1 - alpha) * COALESCE(s.score, 0.0)) AS combined_score
-        FROM dense_results d
-        FULL OUTER JOIN sparse_results s ON d.id = s.id
-        LEFT JOIN semantic_chunks s_lookup ON s.id = s_lookup.id
-    )
     SELECT 
-        c.id,
-        c.content,
-        c.source_file,
-        c.header_path,
-        c.dense_score::FLOAT,
-        c.sparse_score::FLOAT,
-        c.combined_score::FLOAT
-    FROM combined c
-    ORDER BY c.combined_score DESC
+        sc.id,
+        sc.content,
+        sc.source_file,
+        sc.header_path,
+        0.0::FLOAT AS dense_score,
+        ts_rank(sc.content_tsv, websearch_to_tsquery('english', query_text))::FLOAT AS sparse_score,
+        ts_rank(sc.content_tsv, websearch_to_tsquery('english', query_text))::FLOAT AS combined_score
+    FROM semantic_chunks sc
+    WHERE sc.content_tsv @@ websearch_to_tsquery('english', query_text)
+    ORDER BY sparse_score DESC
     LIMIT result_limit;
 END;
 $$ LANGUAGE plpgsql;
@@ -499,8 +468,8 @@ VALUES (
 -- GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO apex_user;
 
 -- Indexes for semantic_chunks
-CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON semantic_chunks 
-    USING hnsw (embedding vector_cosine_ops);
+-- CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON semantic_chunks 
+--     -- USING hnsw (embedding vector_cosine_ops);
 
 CREATE INDEX IF NOT EXISTS idx_chunks_tsv ON semantic_chunks 
     USING GIN (content_tsv);
@@ -524,7 +493,7 @@ CREATE TABLE IF NOT EXISTS code_entities (
     end_line INTEGER,
     signature TEXT,
     docstring TEXT,
-    docstring_embedding VECTOR(768),  -- Embedding of docstring + signature
+    docstring_embedding float8[],  -- Embedding of docstring + signature
     metadata JSONB DEFAULT '{}',
     content_hash TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -532,8 +501,8 @@ CREATE TABLE IF NOT EXISTS code_entities (
 );
 
 -- Indexes for code_entities
-CREATE INDEX IF NOT EXISTS idx_code_embedding ON code_entities 
-    USING hnsw (docstring_embedding vector_cosine_ops);
+-- CREATE INDEX IF NOT EXISTS idx_code_embedding ON code_entities 
+--     -- USING hnsw (docstring_embedding vector_cosine_ops);
 
 CREATE INDEX IF NOT EXISTS idx_code_type ON code_entities (entity_type);
 
@@ -551,7 +520,7 @@ CREATE TABLE IF NOT EXISTS memory_notes (
     content TEXT NOT NULL,
     context TEXT,
     keywords TEXT[],
-    embedding VECTOR(768),
+    embedding float8[],
     source_ref TEXT,  -- Link to source document/code entity
     usage_count INTEGER DEFAULT 0,
     last_accessed TIMESTAMPTZ DEFAULT NOW(),
@@ -562,8 +531,8 @@ CREATE TABLE IF NOT EXISTS memory_notes (
 );
 
 -- Indexes for memory_notes
-CREATE INDEX IF NOT EXISTS idx_memory_embedding ON memory_notes 
-    USING hnsw (embedding vector_cosine_ops);
+-- CREATE INDEX IF NOT EXISTS idx_memory_embedding ON memory_notes 
+--     -- USING hnsw (embedding vector_cosine_ops);
 
 CREATE INDEX IF NOT EXISTS idx_memory_active ON memory_notes (is_active);
 
@@ -618,33 +587,8 @@ CREATE INDEX IF NOT EXISTS idx_manifest_status ON ingestion_manifest (status);
 CREATE INDEX IF NOT EXISTS idx_manifest_type ON ingestion_manifest (file_type);
 
 -- ============================================
--- FUNCTIONS
--- ============================================
+-- Removed duplicate triggers and function definition that were here.
 
--- Function to update the updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Triggers for updated_at
-CREATE TRIGGER update_chunks_updated_at
-    BEFORE UPDATE ON semantic_chunks
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_code_updated_at
-    BEFORE UPDATE ON code_entities
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_manifest_updated_at
-    BEFORE UPDATE ON ingestion_manifest
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================
 -- HELPER FUNCTIONS FOR HYBRID SEARCH
@@ -653,7 +597,7 @@ CREATE TRIGGER update_manifest_updated_at
 -- Hybrid search function combining vector and BM25
 CREATE OR REPLACE FUNCTION hybrid_search(
     query_text TEXT,
-    query_embedding VECTOR(768),
+    query_embedding float8[],
     alpha FLOAT DEFAULT 0.7,
     result_limit INTEGER DEFAULT 20
 )
@@ -667,51 +611,19 @@ RETURNS TABLE(
     combined_score FLOAT
 ) AS $$
 BEGIN
+    -- STUBBED HYBRID SEARCH (Sparse only due to missing pgvector)
     RETURN QUERY
-    WITH dense_results AS (
-        SELECT 
-            sc.id,
-            sc.content,
-            sc.source_file,
-            sc.header_path,
-            1 - (sc.embedding <=> query_embedding) AS score
-        FROM semantic_chunks sc
-        WHERE sc.embedding IS NOT NULL
-        ORDER BY sc.embedding <=> query_embedding
-        LIMIT 100
-    ),
-    sparse_results AS (
-        SELECT 
-            sc.id,
-            ts_rank(sc.content_tsv, websearch_to_tsquery('english', query_text)) AS score
-        FROM semantic_chunks sc
-        WHERE sc.content_tsv @@ websearch_to_tsquery('english', query_text)
-        ORDER BY score DESC
-        LIMIT 100
-    ),
-    combined AS (
-        SELECT 
-            COALESCE(d.id, s_lookup.id) AS id,
-            COALESCE(d.content, s_lookup.content) AS content,
-            COALESCE(d.source_file, s_lookup.source_file) AS source_file,
-            COALESCE(d.header_path, s_lookup.header_path) AS header_path,
-            COALESCE(d.score, 0.0) AS dense_score,
-            COALESCE(s.score, 0.0) AS sparse_score,
-            (alpha * COALESCE(d.score, 0.0) + (1 - alpha) * COALESCE(s.score, 0.0)) AS combined_score
-        FROM dense_results d
-        FULL OUTER JOIN sparse_results s ON d.id = s.id
-        LEFT JOIN semantic_chunks s_lookup ON s.id = s_lookup.id
-    )
     SELECT 
-        c.id,
-        c.content,
-        c.source_file,
-        c.header_path,
-        c.dense_score::FLOAT,
-        c.sparse_score::FLOAT,
-        c.combined_score::FLOAT
-    FROM combined c
-    ORDER BY c.combined_score DESC
+        sc.id,
+        sc.content,
+        sc.source_file,
+        sc.header_path,
+        0.0::FLOAT AS dense_score,
+        ts_rank(sc.content_tsv, websearch_to_tsquery('english', query_text))::FLOAT AS sparse_score,
+        ts_rank(sc.content_tsv, websearch_to_tsquery('english', query_text))::FLOAT AS combined_score
+    FROM semantic_chunks sc
+    WHERE sc.content_tsv @@ websearch_to_tsquery('english', query_text)
+    ORDER BY sparse_score DESC
     LIMIT result_limit;
 END;
 $$ LANGUAGE plpgsql;

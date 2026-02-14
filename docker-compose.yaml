@@ -25,21 +25,23 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # Memgraph for graph storage and traversal
-  memgraph:
-    image: memgraph/memgraph-platform
-    container_name: apex-memgraph
-    ports:
-      - "7687:7687"   # Bolt protocol (Cypher queries)
-      - "7444:7444"   # Lab websocket
-      - "3000:3000"   # Memgraph Lab UI
-    volumes:
-      - memgraph_data:/var/lib/memgraph
+  # Neo4j Community Edition for graph storage and traversal
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: apex-neo4j
     environment:
-      MEMGRAPH_USER: ""
-      MEMGRAPH_PASSWORD: ""
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-changeme}
+      NEO4J_dbms_memory_heap_initial__size: 512m
+      NEO4J_dbms_memory_heap_max__size: 2g
+      NEO4J_dbms_memory_pagecache_size: 1g
+    ports:
+      - "7474:7474"   # HTTP
+      - "7687:7687"   # Bolt protocol (Cypher queries)
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
     healthcheck:
-      test: ["CMD", "echo", "'RETURN 1;'", "|", "mgconsole"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,8 +50,10 @@ services:
 volumes:
   postgres_data:
     name: apex-postgres-data
-  memgraph_data:
-    name: apex-memgraph-data
+  neo4j_data:
+    name: apex-neo4j-data
+  neo4j_logs:
+    name: apex-neo4j-logs
 
 networks:
   default:

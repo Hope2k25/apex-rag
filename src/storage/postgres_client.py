@@ -106,6 +106,11 @@ class PostgresClient:
             await self._pool.close()
             self._pool = None
 
+    async def close(self):
+        """Alias for disconnect."""
+        await self.disconnect()
+
+
     async def __aenter__(self):
         await self.connect()
         return self
@@ -120,6 +125,70 @@ class PostgresClient:
             await self.connect()
         async with self._pool.acquire() as conn:
             yield conn
+
+    # ========================================
+    # COMPATIBILITY METHODS (for Pipeline)
+    # ========================================
+
+    async def upsert_chunk(
+        self,
+        source_file: str,
+        chunk_index: int,
+        content: str,
+        embedding: Optional[list[float]],
+        metadata: dict,
+        header_path: str = "",
+        content_hash: str = "",
+    ):
+        """Compatibility wrapper for upserting chunks."""
+        chunk_data = SemanticChunkCreate(
+            source_file=source_file,
+            chunk_index=chunk_index,
+            header_path=header_path,
+            content=content,
+            embedding=embedding,
+            metadata=metadata,
+            content_hash=content_hash,
+        )
+        return await self.create_chunk(chunk_data)
+
+    async def upsert_manifest(
+        self,
+        source_file: str,
+        file_type: str,
+        status: str,
+        knowledge_type: Optional[str] = None,
+        chunk_count: int = 0,
+        content_hash: Optional[str] = None,
+        error_message: Optional[str] = None,
+    ) -> IngestionManifestEntry:
+        """Compatibility wrapper for upserting manifest entries."""
+        async with self.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                INSERT INTO ingestion_manifest 
+                    (source_file, file_type, knowledge_type, status, chunk_count, content_hash, error_message, ingested_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, CASE WHEN $4 = 'completed' THEN NOW() ELSE NULL END)
+                ON CONFLICT (source_file) DO UPDATE SET
+                    file_type = EXCLUDED.file_type,
+                    knowledge_type = EXCLUDED.knowledge_type,
+                    status = EXCLUDED.status,
+                    chunk_count = EXCLUDED.chunk_count,
+                    content_hash = EXCLUDED.content_hash,
+                    error_message = EXCLUDED.error_message,
+                    ingested_at = CASE WHEN EXCLUDED.status = 'completed' THEN NOW() ELSE ingestion_manifest.ingested_at END,
+                    updated_at = NOW()
+                RETURNING *
+                """,
+                source_file,
+                file_type,
+                knowledge_type,
+                status,
+                chunk_count,
+                content_hash,
+                error_message,
+            )
+            return IngestionManifestEntry(**dict(row))
 
     # ========================================
     # SEMANTIC CHUNKS

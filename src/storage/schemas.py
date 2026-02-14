@@ -8,12 +8,12 @@ These models define the data structures for:
 - Ingestion manifests
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ============================================
@@ -79,8 +79,7 @@ class SemanticChunk(SemanticChunkBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============================================
@@ -114,8 +113,7 @@ class CodeEntity(CodeEntityBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============================================
@@ -149,8 +147,7 @@ class MemoryNote(MemoryNoteBase):
     deleted_reason: Optional[str] = None
     restored_from: Optional[UUID] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============================================
@@ -175,8 +172,7 @@ class MemoryCheckpoint(BaseModel):
     memory_snapshot: MemorySnapshot
     is_current: bool = False
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============================================
@@ -198,8 +194,7 @@ class IngestionManifestEntry(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============================================
@@ -279,7 +274,7 @@ class UniversalMetadata(BaseModel):
     language_tags: list[str] = Field(default_factory=list)
     keywords: list[str] = Field(default_factory=list)
     original_format: Optional[str] = None
-    extracted_at: datetime = Field(default_factory=datetime.utcnow)
+    extracted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     content_hash: Optional[str] = None
 
 
@@ -333,7 +328,7 @@ class LibraryInfo(BaseModel):
     license: Optional[str] = None
     homepage_url: Optional[str] = None
     documentation_url: Optional[str] = None
-    documented_at: datetime = Field(default_factory=datetime.utcnow)
+    documented_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ParameterInfo(BaseModel):
@@ -383,7 +378,7 @@ class ErrorPattern(ErrorPatternBase):
     linked_fix_ids: list[str] = Field(default_factory=list)
     times_encountered: int = 0
     last_seen: Optional[datetime] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class APIElementBase(BaseModel):
@@ -432,8 +427,8 @@ class APIElement(APIElementBase):
     start_line: Optional[int] = None
     end_line: Optional[int] = None
     source_hash: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     class Config:
         from_attributes = True
@@ -470,5 +465,5 @@ class ProjectDependencies(BaseModel):
     project_path: str
     languages_detected: list[ProgrammingLanguage]
     dependencies: list[DependencyInfo]
-    extracted_at: datetime = Field(default_factory=datetime.utcnow)
+    extracted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     lockfile_sources: list[str] = Field(default_factory=list)  # Which files were parsed

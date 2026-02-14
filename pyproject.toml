@@ -22,7 +22,8 @@ dependencies = [
     # Chunking (replaces custom chunker)
     "chonkie>=0.3.0",            # RAG-focused semantic chunking (MIT)
     # Reranking (NEW - for retrieval quality)
-    "flashrank>=0.2.0",          # Ultra-fast CPU reranking (Apache 2.0)
+    # Note: flashrank temporarily disabled due to Windows onnxruntime dependency issues
+    # "flashrank==0.2.7",          # Ultra-fast CPU reranking (Apache 2.0)
     # Tree-sitter for code parsing
     "tree-sitter>=0.24.0",
     "tree-sitter-python>=0.23.0",
@@ -35,12 +36,27 @@ dependencies = [
     "pydantic>=2.10.0",
     "pyyaml>=6.0",
     "python-dotenv>=1.0.0",
+    "pyarrow>=23.0.0",
+    "pymupdf>=1.24.14",
+    "html2text>=2025.4.15",
+    "beautifulsoup4>=4.14.3",
 ]
 
 [project.optional-dependencies]
 dev = [
+    # Testing
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",
+    # Code Quality & Linting
+    # Context7: /astral-sh/ruff - High reputation, 6955 code snippets
+    "ruff>=0.9.0",
+    # Context7: /python/mypy - High reputation, 733 code snippets, Benchmark Score 91.8
+    "mypy>=1.13.0",
+    # Pre-commit Hooks
+    "pre-commit>=4.0.0",
+    # Secrets Detection
+    # Context7: /trufflesecurity/trufflehog - High reputation, 304 code snippets, Benchmark Score 88.3
+    "trufflehog>=2.2.0",
 ]
 
 pdf = [
@@ -53,3 +69,55 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
+
+# Ruff Configuration
+# Context7: /astral-sh/ruff - Python linting and formatting tool
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "ARG",     # flake8-unused-arguments
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# Mypy Configuration
+# Context7: /python/mypy - Static type checker for Python
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "sentence_transformers.*",
+    "torch.*",
+    "tree_sitter.*",
+    "neo4j.*",
+    "asyncpg.*",
+]
+ignore_missing_imports = true
